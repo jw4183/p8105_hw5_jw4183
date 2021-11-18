@@ -1,0 +1,166 @@
+---
+title: "P8105 HW5"
+author: "Jiacheng Wu"
+date: "11/17/2021"
+output: github_document
+---
+
+```{r setup, echo=FALSE, message=FALSE}
+library(tidyverse)
+library(rvest)
+```
+
+## Problem 1
+
+Read in data
+
+```{r}
+homi_df =
+  read.csv("./homicide-data.csv", na = c("", "Unknown")) %>% 
+  mutate(city_state = str_c(city, state),
+         resolved = case_when(
+           disposition =="Closed without arrest" ~ "unsolved",
+           disposition =="Open/No arrest" ~"unsolved",
+           disposition =="Closed by arrest" ~ "solved"
+         )) %>% 
+  filter(city_state != "Tulsa, AL") %>% 
+  relocate(city_state)
+
+homi_df =
+  homi_df %>% 
+  group_by(city_state) %>% 
+  summarise(
+    n_homi = n(),
+    unsol_homi = sum(resolved == "unsolved")
+  )
+```
+
+```{r}
+homi_raw = read.csv("./homicide-data.csv", na = c("", "Unknown"))
+```
+
+There are `r nrow(homi_raw)` total observations in the raw data and `r ncol(homi_raw)` total variables. 
+
+
+Do a prop test for Baltimore.
+
+```{r}
+prop.test(
+  homi_df %>% filter(city_state == "BaltimoreMD") %>% pull(unsol_homi), 
+  homi_df %>% filter(city_state == "BaltimoreMD") %>% pull(n_homi)) %>% 
+  broom::tidy()
+```
+
+Try to iterate for each city.
+
+```{r}
+results_df = 
+  homi_df %>% 
+  mutate(
+    prop_tests = map2(.x = unsol_homi, .y = n_homi, ~prop.test(x = .x, n = .y)),
+    tidy_tests = map(.x = prop_tests, ~broom::tidy(.x))
+  ) %>% 
+  select(-prop_tests) %>% 
+  unnest(tidy_tests) %>% 
+  select(city_state, estimate, conf.low, conf.high)
+```
+
+Plot the results.
+
+```{r}
+results_df %>% 
+  mutate(city_state = fct_reorder(city_state, estimate)) %>% 
+  ggplot(aes(x = city_state, y = estimate)) +
+  geom_point() + 
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+```
+
+
+
+```{r, error = TRUE}
+city_prop_test = function(df) {
+  
+  n_unsovled
+  n_total 
+  
+  prop.test(.....)
+  
+}
+```
+
+
+## Problem 2
+
+```{r, message=FALSE}
+file_df = 
+  tibble(
+    files = list.files("./data")
+  )
+```
+
+```{r, message=FALSE}
+file2_df = 
+  file_df %>% 
+  mutate(
+    path_df = str_c("./data/", files),
+    data = map(path_df, read_csv)
+  )
+```
+
+```{r}
+file3_df = 
+  file2_df %>% 
+  separate(files, into = c("arm", "subjectID", sep = "-")) %>% 
+  select(arm, subjectID, data) %>% 
+  unnest(data) %>% 
+  pivot_longer(
+    week_1:week_8,
+    names_to = "n_week",
+    values_to = "data"
+  )
+```
+
+Make a spaghetti plot on each subject.
+
+```{r, fig.width=5}
+file3_df %>% 
+  mutate(
+    arm = recode(arm, con = "control", exp = "experimental")
+  ) %>% 
+  ggplot(aes(x = n_week, y = data, group = subjectID, color = subjectID)) +
+  geom_line() +
+  facet_grid(. ~ arm) 
+```
+
+## Problem 3
+
+Iris with missing values.
+
+```{r}
+set.seed(10)
+
+iris_with_missing = iris %>% 
+  map_df(~replace(.x, sample(1:150, 20), NA)) %>%
+  mutate(Species = as.character(Species))
+```
+
+Write the function.
+
+```{r}
+replace_missing_value = function(vec) {
+  
+  if (is.numeric(vec)) {
+    vec = ifelse(is.na(vec), mean(vec, na.rm = TRUE), vec)
+  }
+  else {x = ifelse(is.na(vec), "virginica", vec)}
+}
+```
+
+Run function to the dataset. 
+
+```{r}
+output = map(iris_with_missing, replace_missing_value)
+bind_rows(output)
+```
+
