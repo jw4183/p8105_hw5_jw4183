@@ -123,14 +123,17 @@ file3_df =
 
 Make a spaghetti plot on each subject.
 
-```{r, fig.width=5}
+```{r, fig.width=10}
 file3_df %>% 
   mutate(
     arm = recode(arm, con = "control", exp = "experimental")
   ) %>% 
   ggplot(aes(x = n_week, y = data, group = subjectID, color = subjectID)) +
   geom_line() +
-  facet_grid(. ~ arm) 
+  facet_grid(. ~ arm) +
+  labs(
+    title = "Experimental data of each subject over time: control vs experimental"
+  )
 ```
 
 ## Problem 3
