@@ -136,6 +136,8 @@ file3_df %>%
   )
 ```
 
+The experimental group has overall higher values of the experimental data. For both the control and the experimental group, there is an increasing trend of the data value from week 1 to week 8.
+
 ## Problem 3
 
 Iris with missing values.
